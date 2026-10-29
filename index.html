@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weekend Checklist</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weekend">
+<meta name="theme-color" content="#0d0820">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="manifest" href="manifest.json">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}*,*::before,*::after{box-sizing:border-box}img{max-width:100%}[hidden]{display:none!important}</style>
+<meta name="apple-mobile-web-app-title" content="Weekend">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Monoton&family=Sora:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a dance-floor night. Mirror ball header, then Fri / Sat / Sun stacked as glowing glass panels. Deliberately single dark theme. */
+:root{
+  --night:#0d0820; --night-2:#1a0f3a; --panel:rgba(255,255,255,.06); --panel-line:rgba(255,255,255,.14);
+  --ink:#f6f2ff; --muted:#b5a9d6; --pink:#ff4fb3; --gold:#ffd166; --cyan:#4fe3ff; --violet:#9b6bff;
+  --display:"Monoton", "Impact", "Arial Black", sans-serif;
+  --body:"Sora", -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme:dark;
+}
+html{background:var(--night)}
+body{background:
+  radial-gradient(120% 60% at 50% -10%, #3a1670 0%, transparent 60%),
+  radial-gradient(80% 50% at 100% 40%, rgba(255,79,179,.18) 0%, transparent 60%),
+  radial-gradient(80% 50% at 0% 80%, rgba(79,227,255,.14) 0%, transparent 60%),
+  var(--night);
+  background-attachment:fixed;
+  color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;min-height:100vh;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 56px}
+#flecks{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+header{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.hang{width:2px;height:22px;background:linear-gradient(var(--muted),transparent);opacity:.6;margin-bottom:-12px}
+#ball{width:150px;height:150px;max-width:100%;filter:drop-shadow(0 0 24px rgba(155,107,255,.55))}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,9vw,44px);line-height:1.05;margin:4px 0 0;letter-spacing:.02em;
+  background:linear-gradient(90deg,var(--gold),var(--pink) 45%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent;text-wrap:balance}
+.sub{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:4px}
+.nav button{background:var(--panel);border:1px solid var(--panel-line);color:var(--ink);border-radius:999px;width:42px;height:42px;font-size:20px;cursor:pointer;flex:none}
+.range{font-weight:600;flex:1;font-variant-numeric:tabular-nums}
+.range small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+
+.meter{width:100%;display:flex;flex-direction:column;gap:6px}
+.progress{height:8px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink),var(--gold));box-shadow:0 0 12px var(--pink);transition:width .4s}
+.count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+#days{display:flex;flex-direction:column;gap:14px}
+.day{--hue:var(--pink);background:var(--panel);border:1px solid var(--panel-line);border-radius:18px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.day[data-day="fri"]{--hue:var(--gold)}
+.day[data-day="sat"]{--hue:var(--pink)}
+.day[data-day="sun"]{--hue:var(--cyan)}
+.day.today{border-color:var(--hue);box-shadow:0 0 0 1px var(--hue),0 0 28px -6px var(--hue)}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+.dayhead h2{margin:0;font-size:22px;font-weight:700;letter-spacing:.01em;color:var(--hue)}
+.dayhead .meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.pill{font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--night);background:var(--hue);padding:3px 9px;border-radius:999px}
+
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+li{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,.08)}
+li:first-child{border-top:0}
+li label{display:flex;align-items:center;gap:12px;flex:1;min-width:0;cursor:pointer}
+li input[type=checkbox]{appearance:none;-webkit-appearance:none;width:26px;height:26px;flex:none;margin:0;border-radius:50%;cursor:pointer;
+  border:2px solid rgba(255,255,255,.3);background:transparent;display:grid;place-content:center;transition:transform .15s,background .2s}
+li input[type=checkbox]:checked{border-color:transparent;background:conic-gradient(from 30deg,var(--cyan),var(--violet),var(--pink),var(--gold),var(--cyan));box-shadow:0 0 14px -2px var(--hue)}
+li input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid var(--night);border-width:0 3px 3px 0;transform:rotate(45deg) translate(-1px,-1px)}
+li input[type=checkbox]:active{transform:scale(.9)}
+.text{overflow-wrap:anywhere}
+li.is-done .text{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--hue)}
+.kind{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--hue);border:1px solid var(--hue);border-radius:999px;padding:1px 7px;flex:none;opacity:.85}
+.del{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;width:32px;height:32px;cursor:pointer;flex:none;border-radius:8px}
+
+.add{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.add input[type=text]{flex:1 1 180px;min-width:0;font:inherit;font-size:16px;padding:10px 14px;border:1px solid var(--panel-line);border-radius:12px;background:rgba(0,0,0,.25);color:var(--ink)}
+.add input[type=text]::placeholder{color:var(--muted)}
+.add .row{display:flex;gap:10px;align-items:center}
+.repeat{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+.repeat input{accent-color:var(--hue);width:16px;height:16px}
+.add button{font:inherit;font-weight:700;padding:10px 18px;border-radius:12px;border:0;background:var(--hue);color:var(--night);cursor:pointer}
+
+input:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.status{font-size:12px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.progress span,li input[type=checkbox]{transition:none}}
+</style>
+</head>
+<body>
+
+<canvas id="flecks" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header>
+    <div class="hang" aria-hidden="true"></div>
+    <canvas id="ball" width="300" height="300" role="img" aria-label="Spinning disco ball"></canvas>
+    <div class="sub" id="headline">This weekend</div>
+    <h1>Weekend Checklist</h1>
+    <div class="nav">
+      <button id="prev" aria-label="Previous weekend">‹</button>
+      <div class="range" id="range"></div>
+      <button id="next" aria-label="Next weekend">›</button>
+    </div>
+    <div class="meter">
+      <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+      <div class="count" id="count"></div>
+    </div>
+  </header>
+  <main id="days"></main>
+  <div class="status" id="status">Loading your list…</div>
+</div>
+
+<script>
+/* ---------- Disco ball + light flecks ---------- */
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ball=document.getElementById("ball"),bx=ball.getContext("2d");
+const fl=document.getElementById("flecks"),fx=fl.getContext("2d");
+const BANDS=14,COLORS=["#ff4fb3","#4fe3ff","#ffd166","#9b6bff"];
+const sparkle=[];for(let i=0;i<BANDS*40;i++)sparkle.push(Math.random());
+function drawBall(rot){
+  const W=300,R=128,cx=150,cy=150;bx.clearRect(0,0,W,W);
+  const g=bx.createRadialGradient(cx-40,cy-50,10,cx,cy,R);g.addColorStop(0,"#d9d3ee");g.addColorStop(.6,"#6d6390");g.addColorStop(1,"#241a45");
+  bx.fillStyle=g;bx.beginPath();bx.arc(cx,cy,R,0,Math.PI*2);bx.fill();
+  const L=[-.45,-.55,.7];const ln=Math.hypot(...L);
+  for(let i=0;i<BANDS;i++){
+    const phi=-Math.PI/2+(i+.5)*Math.PI/BANDS;const ring=Math.cos(phi);
+    const n=Math.max(6,Math.round(ring*40));const dPhi=Math.PI/BANDS;
+    for(let j=0;j<n;j++){
+      const th=(j+.5)/n*Math.PI*2+rot;
+      const x=ring*Math.sin(th),y=Math.sin(phi),z=ring*Math.cos(th);
+      if(z<=0.05)continue;
+      const dTh=Math.PI*2/n;
+      const w=R*ring*dTh*z*.86,h=R*dPhi*Math.cos(phi)*.86+R*dPhi*.0;
+      const px=cx+x*R,py=cy+y*R;
+      const lit=Math.max(0,(x*L[0]+y*L[1]+z*L[2])/ln);
+      const s=sparkle[(i*40+j)%sparkle.length];
+      const flick=Math.sin(rot*6+s*40);
+      let shade=40+lit*170+s*30;
+      bx.fillStyle=`rgb(${shade|0},${(shade*.95)|0},${Math.min(255,shade*1.12)|0})`;
+      if(lit>.82&&flick>.7){bx.fillStyle="#ffffff"}
+      else if(s>.93&&flick>.3){bx.fillStyle=COLORS[(i+j)%4]}
+      bx.fillRect(px-w/2,py-h/2,Math.max(1,w-1),Math.max(1,h*.9));
+    }
+  }
+  const hl=bx.createRadialGradient(cx-48,cy-56,0,cx-48,cy-56,40);hl.addColorStop(0,"rgba(255,255,255,.85)");hl.addColorStop(1,"rgba(255,255,255,0)");
+  bx.fillStyle=hl;bx.beginPath();bx.arc(cx,cy,R,0,Math.PI*2);bx.fill();
+}
+let flecks=[];
+function sizeFlecks(){const d=devicePixelRatio||1;fl.width=innerWidth*d;fl.height=innerHeight*d;fx.setTransform(d,0,0,d,0,0);
+  flecks=Array.from({length:Math.round(innerWidth*innerHeight/9000)},()=>({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:1+Math.random()*2.5,
+    c:COLORS[Math.random()*4|0],v:.15+Math.random()*.45,p:Math.random()*6.28}))}
+function drawFlecks(t){fx.clearRect(0,0,innerWidth,innerHeight);
+  for(const f of flecks){
+    if(!reduce){f.x+=f.v;if(f.x>innerWidth+10)f.x=-10}
+    const a=reduce?.35:.2+.5*(.5+.5*Math.sin(t/500+f.p));
+    fx.globalAlpha=a;fx.fillStyle=f.c;fx.beginPath();fx.arc(f.x,f.y,f.r,0,Math.PI*2);fx.fill();
+  }fx.globalAlpha=1}
+sizeFlecks();addEventListener("resize",sizeFlecks);
+function frame(t){drawBall(t/2600);drawFlecks(t);if(!reduce)requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+
+/* ---------- Checklist ---------- */
+const DAYS=[
+  {key:"fri",name:"Friday",offset:0,defaults:[["shabbat","Shabbat"],["workout","Workout"],["walk","Walk"],["pt","PT exercises"]]},
+  {key:"sat",name:"Saturday",offset:1,defaults:[["workout","Workout"],["walk","Walk"],["pt","PT exercises"]]},
+  {key:"sun",name:"Sunday",offset:2,defaults:[["walk","Walk"],["pt","PT exercises"],["nathan","Nathan"],["parents","Call Mom & Dad"],["shower","Super shower"]]}
+];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+function currentFriday(){const t=new Date();t.setHours(0,0,0,0);const dow=t.getDay();
+  const back={5:0,6:1,0:2}[dow];return back!==undefined?addDays(t,-back):addDays(t,5-dow)}
+const thisFri=currentFriday();
+let fri=new Date(thisFri);
+
+let week={done:{},added:{fri:[],sat:[],sun:[]}};
+let recur={fri:[],sat:[],sun:[]};
+let store=null, unsubWeek=null;
+const uid=()=>Math.random().toString(36).slice(2,10);
+
+const local={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const queues={};
+function save(name,obj){
+  if(!store){local.set("wk:"+name,obj);return}
+  const ref=store.doc(name);
+  queues[name]=(queues[name]||Promise.resolve()).then(()=>ref.set(obj)).catch(()=>setStatus("Couldn't save that change. Check your connection and try again."));
+}
+const copy=v=>v?JSON.parse(JSON.stringify(v)):v;
+function normWeek(d){d=copy(d)||{};const a=d.added||{};return{done:d.done||{},added:{fri:a.fri||[],sat:a.sat||[],sun:a.sun||[]}}}
+function normRecur(d){d=copy(d)||{};return{fri:d.fri||[],sat:d.sat||[],sun:d.sun||[]}}
+function setStatus(t){document.getElementById("status").textContent=t}
+
+function watchWeek(){
+  const name="w"+iso(fri);
+  if(unsubWeek){unsubWeek();unsubWeek=null}
+  if(!store){week=normWeek(local.get("wk:"+name));render();return}
+  week=normWeek(null);render();
+  unsubWeek=store.doc(name).onSnapshot(s=>{week=normWeek(s.data());render()},()=>setStatus("Couldn't load this weekend. Reopen the page to retry."));
+}
+
+function itemsFor(day){
+  const out=day.defaults.map(([id,t])=>({key:`d-${day.key}-${id}`,text:t,kind:"default"}));
+  recur[day.key].forEach(r=>out.push({key:"r-"+r.id,text:r.text,kind:"weekly",id:r.id}));
+  week.added[day.key].forEach(a=>out.push({key:"a-"+a.id,text:a.text,kind:"once",id:a.id}));
+  return out;
+}
+function render(){
+  const sun=addDays(fri,2);
+  const diff=Math.round((fri-thisFri)/864e5/7);
+  document.getElementById("headline").textContent=diff===0?"This weekend":diff===1?"Next weekend":diff===-1?"Last weekend":diff>0?`${diff} weekends ahead`:`${-diff} weekends ago`;
+  document.getElementById("range").innerHTML=`${MON[fri.getMonth()]} ${fri.getDate()} – ${MON[sun.getMonth()]} ${sun.getDate()}<small>${fri.getFullYear()}</small>`;
+  const todayIso=iso(new Date());
+  const main=document.getElementById("days");main.innerHTML="";
+  let total=0,done=0;
+  DAYS.forEach(day=>{
+    const date=addDays(fri,day.offset);const isToday=iso(date)===todayIso;
+    const items=itemsFor(day);const dayDone=items.filter(it=>week.done[it.key]).length;
+    const sec=document.createElement("section");sec.className="day"+(isToday?" today":"");sec.dataset.day=day.key;
+    const pill=dayDone===items.length&&items.length?'<span class="pill">All done</span>':isToday?'<span class="pill">Today</span>':"";
+    sec.innerHTML=`<div class="dayhead"><h2>${day.name}</h2><span class="meta">${pill}<span>${MON[date.getMonth()]} ${date.getDate()}</span></span></div>`;
+    const ul=document.createElement("ul");
+    items.forEach(it=>{
+      total++;const isDone=!!week.done[it.key];if(isDone)done++;
+      const li=document.createElement("li");if(isDone)li.className="is-done";
+      const lab=document.createElement("label");
+      const cb=document.createElement("input");cb.type="checkbox";cb.id="cb-"+it.key;cb.checked=isDone;
+      cb.addEventListener("change",()=>{if(cb.checked)week.done[it.key]=true;else delete week.done[it.key];save("w"+iso(fri),week);render()});
+      const sp=document.createElement("span");sp.className="text";sp.textContent=it.text;
+      lab.append(cb,sp);li.append(lab);
+      if(it.kind==="weekly"){const k=document.createElement("span");k.className="kind";k.textContent="Weekly";li.append(k)}
+      if(it.kind!=="default"){
+        const b=document.createElement("button");b.className="del";b.textContent="×";
+        b.setAttribute("aria-label",it.kind==="weekly"?`Remove ${it.text} from every weekend`:`Remove ${it.text}`);
+        b.addEventListener("click",()=>{
+          delete week.done[it.key];
+          if(it.kind==="weekly"){recur[day.key]=recur[day.key].filter(r=>r.id!==it.id);save("recurring",recur)}
+          else{week.added[day.key]=week.added[day.key].filter(a=>a.id!==it.id)}
+          save("w"+iso(fri),week);render();
+        });
+        li.append(b);
+      }
+      ul.append(li);
+    });
+    sec.append(ul);
+    const form=document.createElement("form");form.className="add";
+    form.innerHTML=`<input type="text" id="add-${day.key}" placeholder="Add to ${day.name}…" aria-label="Add an item to ${day.name}" autocomplete="off"><div class="row"><label class="repeat"><input type="checkbox" id="rep-${day.key}">Every week</label><button type="submit">Add</button></div>`;
+    form.addEventListener("submit",e=>{
+      e.preventDefault();const inp=form.querySelector("input[type=text]");const t=inp.value.trim();if(!t)return;
+      if(form.querySelector(".repeat input").checked){recur={...recur,[day.key]:[...recur[day.key],{id:uid(),text:t}]};save("recurring",recur)}
+      else{week={...week,added:{...week.added,[day.key]:[...week.added[day.key],{id:uid(),text:t}]}};save("w"+iso(fri),week)}
+      inp.value="";render();document.getElementById("add-"+day.key).focus();
+    });
+    sec.append(form);main.append(sec);
+  });
+  document.getElementById("bar").style.width=total?`${done/total*100}%`:"0";
+  document.getElementById("count").textContent=done===total&&total?`All ${total} done — enjoy the weekend`:`${done} of ${total} done`;
+}
+
+document.getElementById("prev").onclick=()=>{fri=addDays(fri,-7);watchWeek()};
+document.getElementById("next").onclick=()=>{fri=addDays(fri,7);watchWeek()};
+
+render();
+(async()=>{
+  let db=null,user=null;
+  try{[db,user]=await Promise.all([window.claude?.use?.("db"),window.claude?.use?.("user")])}catch(e){}
+  const id=user?await user.id():null;
+  if(db&&id){
+    store=db.collection("data/users/"+id);
+    store.doc("recurring").onSnapshot(s=>{recur=normRecur(s.data());render()},()=>{});
+    setStatus("Saved to your account, so it syncs between your phone and iPad.");
+  }else{
+    recur=normRecur(local.get("wk:recurring"));
+    setStatus("Saved on this device.");
+  }
+  watchWeek();
+})();
+</script>
+
+</body>
+</html>
