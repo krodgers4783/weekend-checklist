@@ -55,6 +55,13 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,9vw,44px);lin
 .count{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 #days{display:flex;flex-direction:column;gap:14px}
+.day[data-day="any"]{--hue:var(--violet)}
+.move{flex:none;font:inherit;font-size:12px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--panel-line);border-radius:999px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.from{display:inline-block;margin-left:8px;font-size:11px;color:var(--muted);letter-spacing:.04em}
+li.is-moved .text{color:var(--muted);opacity:.6;flex:1;min-width:0}
+li.is-moved .note{font-size:12px;color:var(--muted);flex:none}
+.undo{flex:none;font:inherit;font-size:12px;font-weight:700;color:var(--hue);background:none;border:0;padding:4px 6px;cursor:pointer}
+li.empty{color:var(--muted);font-size:14px}
 .day{--hue:var(--pink);background:var(--panel);border:1px solid var(--panel-line);border-radius:18px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:6px;
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .day[data-day="fri"]{--hue:var(--gold)}
@@ -167,10 +174,13 @@ requestAnimationFrame(frame);
 
 /* ---------- Checklist ---------- */
 const DAYS=[
-  {key:"fri",name:"Friday",offset:0,defaults:[["shabbat","Shabbat"],["workout","Workout"],["walk","Walk"],["pt","PT exercises"]]},
-  {key:"sat",name:"Saturday",offset:1,defaults:[["workout","Workout"],["walk","Walk"],["pt","PT exercises"]]},
-  {key:"sun",name:"Sunday",offset:2,defaults:[["walk","Walk"],["pt","PT exercises"],["nathan","Nathan"],["parents","Call Mom & Dad"],["shower","Super shower"]]}
+  {key:"fri",name:"Friday",short:"Fri",offset:0,defaults:[["shabbat","Shabbat"],["workout","Workout"],["walk","Walk"],["pt","PT exercises"]]},
+  {key:"sat",name:"Saturday",short:"Sat",offset:1,defaults:[["workout","Workout"],["walk","Walk"],["pt","PT exercises"],["groceries","Groceries"]]},
+  {key:"sun",name:"Sunday",short:"Sun",offset:2,defaults:[["walk","Walk"],["pt","PT exercises"],["nathan","Nathan"],["parents","Call Mom & Dad"],["shower","Super shower"],["linens","Change linens"]]},
+  {key:"any",name:"Sometime this weekend",short:"Weekend",offset:null,defaults:[]}
 ];
+const KEYS=DAYS.map(d=>d.key);
+const BYKEY=Object.fromEntries(DAYS.map(d=>[d.key,d]));
 const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
@@ -178,39 +188,57 @@ function currentFriday(){const t=new Date();t.setHours(0,0,0,0);const dow=t.getD
   const back={5:0,6:1,0:2}[dow];return back!==undefined?addDays(t,-back):addDays(t,5-dow)}
 const thisFri=currentFriday();
 let fri=new Date(thisFri);
-
-let week={done:{},added:{fri:[],sat:[],sun:[]}};
-let recur={fri:[],sat:[],sun:[]};
-let store=null, unsubWeek=null;
 const uid=()=>Math.random().toString(36).slice(2,10);
 
+/* storage: this device only */
 const local={get(k){try{return JSON.parse(localStorage.getItem(k)||"null")}catch(e){return null}},
-             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const queues={};
-function save(name,obj){
-  if(!store){local.set("wk:"+name,obj);return}
-  const ref=store.doc(name);
-  queues[name]=(queues[name]||Promise.resolve()).then(()=>ref.set(obj)).catch(()=>setStatus("Couldn't save that change. Check your connection and try again."));
-}
-const copy=v=>v?JSON.parse(JSON.stringify(v)):v;
-function normWeek(d){d=copy(d)||{};const a=d.added||{};return{done:d.done||{},added:{fri:a.fri||[],sat:a.sat||[],sun:a.sun||[]}}}
-function normRecur(d){d=copy(d)||{};return{fri:d.fri||[],sat:d.sat||[],sun:d.sun||[]}}
+             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){setStatus("Couldn't save. Check that this browser allows website data.")}}};
+function emptyLists(){return Object.fromEntries(KEYS.map(k=>[k,[]]))}
+function normWeek(d){d=d||{};const a=d.added||{};const added=emptyLists();KEYS.forEach(k=>{if(Array.isArray(a[k]))added[k]=a[k]});
+  return{done:d.done||{},moved:d.moved||{},added}}
+function normRecur(d){d=d||{};const r=emptyLists();KEYS.forEach(k=>{if(Array.isArray(d[k]))r[k]=d[k]});return r}
+const weekName=f=>"w"+iso(f);
+const loadWeek=f=>normWeek(local.get("wk:"+weekName(f)));
+const saveWeek=(f,w)=>local.set("wk:"+weekName(f),w);
+let week=loadWeek(fri);
+let recur=normRecur(local.get("wk:recurring"));
+const saveRecur=()=>local.set("wk:recurring",recur);
 function setStatus(t){document.getElementById("status").textContent=t}
 
-function watchWeek(){
-  const name="w"+iso(fri);
-  if(unsubWeek){unsubWeek();unsubWeek=null}
-  if(!store){week=normWeek(local.get("wk:"+name));render();return}
-  week=normWeek(null);render();
-  unsubWeek=store.doc(name).onSnapshot(s=>{week=normWeek(s.data());render()},()=>setStatus("Couldn't load this weekend. Reopen the page to retry."));
+/* where "not done" sends an item */
+function nextSpot(dayKey){
+  if(dayKey==="fri")return{f:fri,day:"sat",label:"Sat"};
+  if(dayKey==="sat")return{f:fri,day:"sun",label:"Sun"};
+  if(dayKey==="sun")return{f:addDays(fri,7),day:"fri",label:"next Fri"};
+  return{f:addDays(fri,7),day:"any",label:"next weekend"};
+}
+function moveItem(day,it){
+  const to=nextSpot(day.key);const copyId=uid();
+  const entry={id:copyId,text:it.text,from:day.short};
+  if(iso(to.f)===iso(fri)){week.added[to.day].push(entry)}
+  else{const w=loadWeek(to.f);w.added[to.day].push(entry);saveWeek(to.f,w)}
+  delete week.done[it.key];
+  week.moved[it.key]={wk:iso(to.f),day:to.day,id:copyId,label:to.label};
+  saveWeek(fri,week);render();
+}
+function undoMove(key){
+  const m=week.moved[key];if(!m)return;
+  const sameWeek=m.wk===iso(fri);
+  const target=sameWeek?week:loadWeek(new Date(m.wk+"T00:00:00"));
+  target.added[m.day]=target.added[m.day].filter(a=>a.id!==m.id);
+  delete target.done["a-"+m.id];
+  if(!sameWeek)saveWeek(new Date(m.wk+"T00:00:00"),target);
+  delete week.moved[key];saveWeek(fri,week);render();
 }
 
 function itemsFor(day){
-  const out=day.defaults.map(([id,t])=>({key:`d-${day.key}-${id}`,text:t,kind:"default"}));
+  const out=day.defaults.map(([id,t])=>({key:`d-${day.key}-${id}`,text:t,kind:"standing"}));
   recur[day.key].forEach(r=>out.push({key:"r-"+r.id,text:r.text,kind:"weekly",id:r.id}));
-  week.added[day.key].forEach(a=>out.push({key:"a-"+a.id,text:a.text,kind:"once",id:a.id}));
+  week.added[day.key].forEach(a=>out.push({key:"a-"+a.id,text:a.text,kind:"once",id:a.id,from:a.from}));
   return out;
 }
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+
 function render(){
   const sun=addDays(fri,2);
   const diff=Math.round((fri-thisFri)/864e5/7);
@@ -220,67 +248,73 @@ function render(){
   const main=document.getElementById("days");main.innerHTML="";
   let total=0,done=0;
   DAYS.forEach(day=>{
-    const date=addDays(fri,day.offset);const isToday=iso(date)===todayIso;
-    const items=itemsFor(day);const dayDone=items.filter(it=>week.done[it.key]).length;
-    const sec=document.createElement("section");sec.className="day"+(isToday?" today":"");sec.dataset.day=day.key;
-    const pill=dayDone===items.length&&items.length?'<span class="pill">All done</span>':isToday?'<span class="pill">Today</span>':"";
-    sec.innerHTML=`<div class="dayhead"><h2>${day.name}</h2><span class="meta">${pill}<span>${MON[date.getMonth()]} ${date.getDate()}</span></span></div>`;
-    const ul=document.createElement("ul");
+    const date=day.offset==null?null:addDays(fri,day.offset);
+    const isToday=date&&iso(date)===todayIso;
+    const items=itemsFor(day);
+    const active=items.filter(it=>!week.moved[it.key]);
+    const dayDone=active.filter(it=>week.done[it.key]).length;
+    const sec=el("section","day"+(isToday?" today":""));sec.dataset.day=day.key;
+    const pill=active.length&&dayDone===active.length?'<span class="pill">All done</span>':isToday?'<span class="pill">Today</span>':"";
+    const when=date?`${MON[date.getMonth()]} ${date.getDate()}`:"Any day";
+    sec.innerHTML=`<div class="dayhead"><h2>${day.name}</h2><span class="meta">${pill}<span>${when}</span></span></div>`;
+    const ul=el("ul");
+    if(!items.length){ul.append(el("li","empty","Nothing yet. Add something you want to get to this weekend."))}
     items.forEach(it=>{
-      total++;const isDone=!!week.done[it.key];if(isDone)done++;
-      const li=document.createElement("li");if(isDone)li.className="is-done";
-      const lab=document.createElement("label");
-      const cb=document.createElement("input");cb.type="checkbox";cb.id="cb-"+it.key;cb.checked=isDone;
-      cb.addEventListener("change",()=>{if(cb.checked)week.done[it.key]=true;else delete week.done[it.key];save("w"+iso(fri),week);render()});
-      const sp=document.createElement("span");sp.className="text";sp.textContent=it.text;
-      lab.append(cb,sp);li.append(lab);
-      if(it.kind==="weekly"){const k=document.createElement("span");k.className="kind";k.textContent="Weekly";li.append(k)}
-      if(it.kind!=="default"){
-        const b=document.createElement("button");b.className="del";b.textContent="×";
+      const moved=week.moved[it.key];
+      const li=el("li");
+      if(moved){
+        li.className="is-moved";
+        li.append(el("span","text",it.text),el("span","note","Moved to "+moved.label));
+        const u=el("button","undo","Undo");u.setAttribute("aria-label",`Undo moving ${it.text}`);
+        u.addEventListener("click",()=>undoMove(it.key));li.append(u);ul.append(li);return;
+      }
+      total++;const isDone=!!week.done[it.key];if(isDone){done++;li.className="is-done"}
+      const lab=el("label");
+      const cb=el("input");cb.type="checkbox";cb.id="cb-"+it.key;cb.checked=isDone;
+      cb.addEventListener("change",()=>{if(cb.checked)week.done[it.key]=true;else delete week.done[it.key];saveWeek(fri,week);render()});
+      const txt=el("span","text");txt.append(document.createTextNode(it.text));
+      if(it.from){txt.append(el("span","from","from "+it.from))}
+      lab.append(cb,txt);li.append(lab);
+      if(it.kind!=="once")li.append(el("span","kind","Weekly"));
+      if(!isDone){
+        const to=nextSpot(day.key);
+        const mv=el("button","move","→ "+to.label);
+        mv.setAttribute("aria-label",`Not done: move ${it.text} to ${to.label}`);
+        mv.addEventListener("click",()=>moveItem(day,it));li.append(mv);
+      }
+      if(it.kind==="weekly"||it.kind==="once"){
+        const b=el("button","del","×");
         b.setAttribute("aria-label",it.kind==="weekly"?`Remove ${it.text} from every weekend`:`Remove ${it.text}`);
         b.addEventListener("click",()=>{
           delete week.done[it.key];
-          if(it.kind==="weekly"){recur[day.key]=recur[day.key].filter(r=>r.id!==it.id);save("recurring",recur)}
+          if(it.kind==="weekly"){recur[day.key]=recur[day.key].filter(r=>r.id!==it.id);saveRecur()}
           else{week.added[day.key]=week.added[day.key].filter(a=>a.id!==it.id)}
-          save("w"+iso(fri),week);render();
+          saveWeek(fri,week);render();
         });
         li.append(b);
       }
       ul.append(li);
     });
     sec.append(ul);
-    const form=document.createElement("form");form.className="add";
-    form.innerHTML=`<input type="text" id="add-${day.key}" placeholder="Add to ${day.name}…" aria-label="Add an item to ${day.name}" autocomplete="off"><div class="row"><label class="repeat"><input type="checkbox" id="rep-${day.key}">Every week</label><button type="submit">Add</button></div>`;
+    const form=el("form","add");
+    const label=day.key==="any"?"this weekend":day.name;
+    form.innerHTML=`<input type="text" id="add-${day.key}" placeholder="Add to ${label}…" aria-label="Add an item to ${label}" autocomplete="off"><div class="row"><label class="repeat"><input type="checkbox" id="rep-${day.key}">Every week</label><button type="submit">Add</button></div>`;
     form.addEventListener("submit",e=>{
       e.preventDefault();const inp=form.querySelector("input[type=text]");const t=inp.value.trim();if(!t)return;
-      if(form.querySelector(".repeat input").checked){recur={...recur,[day.key]:[...recur[day.key],{id:uid(),text:t}]};save("recurring",recur)}
-      else{week={...week,added:{...week.added,[day.key]:[...week.added[day.key],{id:uid(),text:t}]}};save("w"+iso(fri),week)}
+      if(form.querySelector(".repeat input").checked){recur[day.key]=[...recur[day.key],{id:uid(),text:t}];saveRecur()}
+      else{week.added[day.key]=[...week.added[day.key],{id:uid(),text:t}];saveWeek(fri,week)}
       inp.value="";render();document.getElementById("add-"+day.key).focus();
     });
     sec.append(form);main.append(sec);
   });
   document.getElementById("bar").style.width=total?`${done/total*100}%`:"0";
-  document.getElementById("count").textContent=done===total&&total?`All ${total} done — enjoy the weekend`:`${done} of ${total} done`;
+  document.getElementById("count").textContent=done===total&&total?`All ${total} done. Enjoy the weekend!`:`${done} of ${total} done`;
 }
 
-document.getElementById("prev").onclick=()=>{fri=addDays(fri,-7);watchWeek()};
-document.getElementById("next").onclick=()=>{fri=addDays(fri,7);watchWeek()};
-
+document.getElementById("prev").onclick=()=>{fri=addDays(fri,-7);week=loadWeek(fri);render()};
+document.getElementById("next").onclick=()=>{fri=addDays(fri,7);week=loadWeek(fri);render()};
 render();
-(async()=>{
-  let db=null,user=null;
-  try{[db,user]=await Promise.all([window.claude?.use?.("db"),window.claude?.use?.("user")])}catch(e){}
-  const id=user?await user.id():null;
-  if(db&&id){
-    store=db.collection("data/users/"+id);
-    store.doc("recurring").onSnapshot(s=>{recur=normRecur(s.data());render()},()=>{});
-    setStatus("Saved to your account, so it syncs between your phone and iPad.");
-  }else{
-    recur=normRecur(local.get("wk:recurring"));
-    setStatus("Saved on this device.");
-  }
-  watchWeek();
-})();
+setStatus("Saved on this device.");
 </script>
 
 </body>
